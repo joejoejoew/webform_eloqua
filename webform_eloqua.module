@@ -1,0 +1,103 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * TODO: Enter file description here.
+ */
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function webform_eloqua_form_alter(&$form, &$form_state, $form_id) {
+  if ( $form_id == 'webform_configure_form' ) {
+    $form['webform_eloqua'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Eloqua'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+//todo      '#access' => user_access('create url aliases'),
+      '#weight' => -2,
+    );
+    $val = (boolean) db_result(db_query('SELECT nid from {webform_eloqua} WHERE nid=%d',$form[nid]['#value']));
+    $form['webform_eloqua']['submit_to_eloqua'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Submit form to eloqua'),
+      '#default_value' => $val,
+    );
+    $form['#submit'][] = 'webform_eloqua_save_settings';
+  } elseif ( isset($form['#node']->nid) && $form_id=='webform_client_form_'.$form['#node']->nid ) {
+    $form['#submit'][] = 'webform_eloqua_submit';
+    $nid = arg(1);
+    if ( arg(0)=='node' && is_numeric($nid) ) {
+      $n = node_load($nid);
+      $fields = content_fields( null, $n->type);
+      foreach ( $fields as $field ) {
+        //todo The user must add a group eloqua submit.  Any better options?
+        if ( 'group_eloqua_submit' == fieldgroup_get_group($n->type, $field['field_name']) && !empty($n->{$field['field_name']}[0]['value'])) {
+          $form[substr($field['field_name'],6)] = array(
+            '#type' => 'hidden',
+            '#value' => $n->{$field['field_name']}[0]['value'],
+          );
+        }
+      }
+    }
+  }
+//  dpm($form);
+//  dpm($form_id);
+}
+
+function webform_eloqua_nodeapi(&$node, $op, $a3 = NULL, $a4 = NUL) { 
+  switch ($op) {
+    case 'delete':
+      db_query("DELETE FROM {webform_eloqua} WHERE nid = %d", $node->nid);
+      break;
+  }
+}
+
+function webform_eloqua_save_settings($form, &$form_state){
+  $nid = $form['nid']['#value'];
+  if ( $form['webform_eloqua']['submit_to_eloqua']['#value'] ){
+    db_query('INSERT INTO {webform_eloqua} (nid) VALUES (%d)',$nid);
+  } else {
+    db_query('DELETE FROM {webform_eloqua} WHERE nid=%d',$nid);
+  }
+}
+
+function webform_eloqua_submit($form, &$form_state){
+  $eloqua_values = $form_state['clicked_button']['#post']['submitted'];
+  foreach ( $form_state['clicked_button']['#post'] as $k => $v ) {
+    if ( !is_array($v) && $k!='form_build_id' && $k!='form_token' && $k!='form_id' && $k!='op' ) {
+      $eloqua_values[$k] = $v;
+    }
+  }
+// todo: remove the following line
+  dpm($eloqua_values);
+  $url = 'http://now.eloqua.com/e/f2.aspx';
+// todo: uncomment this line, ALSO, add a watchdog callback in case the post doesn't go through
+  //async_post($url, $eloqua_vals);
+}
+
+function async_post($url, $params) {
+    foreach ($params as $key => &$val) {
+      if (is_array($val)) $val = implode(',', $val);
+        $post_params[] = $key.'='.urlencode($val);
+    }
+    $post_string = implode('&', $post_params);
+
+    $parts=parse_url($url);
+
+    $fp = fsockopen($parts['host'],
+        isset($parts['port'])?$parts['port']:80,
+        $errno, $errstr, 30);
+
+    $out = "POST ".$parts['path']." HTTP/1.1\r\n";
+    $out.= "Host: ".$parts['host']."\r\n";
+    $out.= "Content-Type: application/x-www-form-urlencoded\r\n";
+    $out.= "Content-Length: ".strlen($post_string)."\r\n";
+    $out.= "Connection: Close\r\n\r\n";
+    if (isset($post_string)) $out.= $post_string;
+
+    fwrite($fp, $out);
+    fclose($fp);
+}

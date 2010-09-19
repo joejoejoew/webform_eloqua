@@ -1,0 +1,7 @@
+; $Id$
+name = Webform eloqua
+description = TODO: Description of module
+core = 6.x
+package = Webform
+dependencies[] = webform
+dependencies[] = fieldgroup

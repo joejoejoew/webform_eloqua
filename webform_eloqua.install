@@ -1,0 +1,43 @@
+<?php
+// $Id:
+
+/**
+ * Implementation of hook_install().
+ */
+function webform_eloqua_install() {
+  drupal_install_schema('webform_eloqua');
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function webform_eloqua_disable() {
+  drupal_set_message(t('The webform eloqua module has been disabled.'));
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function webform_eloqua_uninstall() {
+  drupal_uninstall_schema('webform_eloqua');
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function webform_eloqua_schema() {
+  $schema['webform_eloqua'] = array(
+    'description' => t('Custom node field indicating whether or not the corresponding node form should submit to eloqua'),
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => t('The {node}.nid of the node.'),
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+  return $schema;
+}
+
