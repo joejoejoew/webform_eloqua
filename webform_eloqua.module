@@ -16,7 +16,7 @@ function webform_eloqua_form_alter(&$form, &$form_state, $form_id) {
       '#title' => t('Eloqua'),
       '#collapsible' => TRUE,
       '#collapsed' => FALSE,
-//todo      '#access' => user_access('create url aliases'),
+//todo      '#access' => user_access(''),
       '#weight' => -2,
     );
     $val = (boolean) db_result(db_query('SELECT nid from {webform_eloqua} WHERE nid=%d',$form[nid]['#value']));
@@ -33,7 +33,7 @@ function webform_eloqua_form_alter(&$form, &$form_state, $form_id) {
       $n = node_load($nid);
       $fields = content_fields( null, $n->type);
       foreach ( $fields as $field ) {
-        //todo The user must add a group eloqua submit.  Any better options?
+        //todo The user must add a group eloqua_submit.  Any better options?
         if ( 'group_eloqua_submit' == fieldgroup_get_group($n->type, $field['field_name']) && !empty($n->{$field['field_name']}[0]['value'])) {
           $form[substr($field['field_name'],6)] = array(
             '#type' => 'hidden',
@@ -74,8 +74,8 @@ function webform_eloqua_submit($form, &$form_state){
 // todo: remove the following line
   dpm($eloqua_values);
   $url = 'http://now.eloqua.com/e/f2.aspx';
-// todo: uncomment this line, ALSO, add a watchdog callback in case the post doesn't go through
-  //async_post($url, $eloqua_vals);
+// todo: Add a watchdog callback in case the post doesn't go through
+  async_post($url, $eloqua_vals);
 }
 
 function async_post($url, $params) {
